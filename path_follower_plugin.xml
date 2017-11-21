@@ -1,0 +1,7 @@
+<library path="lib/libomni_path_follower">
+  <class name="omni_path_follower/PathFollower" type="omni_path_follower::PathFollower" base_class_type="nav_core::BaseLocalPlanner">
+  <description>
+  simple path follower for omnidirectional robots as a local planner plugin for ROS 
+  </description>
+  </class>
+</library>
