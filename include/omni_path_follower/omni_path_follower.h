@@ -18,6 +18,8 @@ using std::string;
 namespace omni_path_follower
 {
 
+//#define EPSILON 0.000001
+
 class PathFollower : public nav_core::BaseLocalPlanner
 {
 public:
@@ -31,6 +33,7 @@ public:
   bool setPlan(const std::vector< geometry_msgs::PoseStamped > &plan);
 
 private:
+// bool posesEqual(geometry_msgs::PoseStamped first, geometry_msgs::PoseStamped second);
   double in_path_vel_;
   double to_path_k_;
   double angle_k_;

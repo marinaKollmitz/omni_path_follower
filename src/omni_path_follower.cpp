@@ -11,6 +11,21 @@ namespace omni_path_follower
    {
    }
 
+//  bool PathFollower::posesEqual(geometry_msgs::PoseStamped first, geometry_msgs::PoseStamped second)
+//  {
+//    //    first.pose.position - second.pose.position;
+//    if(fabs(first.pose.position.x - second.pose.position.x) < EPSILON &&
+//       fabs(first.pose.position.y - second.pose.position.y) < EPSILON &&
+//       fabs(first.pose.position.z - second.pose.position.z) < EPSILON &&
+//       fabs(first.pose.orientation.x - second.pose.orientation.x) < EPSILON &&
+//       fabs(first.pose.orientation.y - second.pose.orientation.y) < EPSILON &&
+//       fabs(first.pose.orientation.z - second.pose.orientation.z) < EPSILON &&
+//       fabs(first.pose.orientation.w - second.pose.orientation.w) < EPSILON)
+//      return true;
+
+//    return false;
+//  }
+
   void PathFollower::initialize(std::string name, tf::TransformListener *tf, costmap_2d::Costmap2DROS *costmap_ros)
   {
     tfl_ = tf;
@@ -22,6 +37,11 @@ namespace omni_path_follower
     goal_threshold_ = 0.05;
     rotate_to_path_ = true;
     rotate_at_start_ = false;
+
+//    //initialize empty global plan
+//    std::vector<geometry_msgs::PoseStamped> empty_plan;
+//    empty_plan.push_back(geometry_msgs::PoseStamped());
+//    global_plan_ = empty_plan;
 
     goal_reached_ = false;
     initialized_ = true;
