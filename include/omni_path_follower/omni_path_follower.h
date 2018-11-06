@@ -8,6 +8,7 @@
 #include <angles/angles.h>
 #include <base_local_planner/world_model.h>
 #include <base_local_planner/costmap_model.h>
+#include <omni_path_follower/Config.h>
 #include <Eigen/Dense>
 
 using std::string;
@@ -34,7 +35,9 @@ public:
 
 private:
   bool posesEqual(geometry_msgs::PoseStamped first, geometry_msgs::PoseStamped second);
+  void config_callback(Config msg);
   double in_path_vel_;
+  double rotate_vel_;
   double to_path_k_;
   double angle_k_;
   double goal_threshold_;
@@ -44,6 +47,7 @@ private:
   double min_ang_vel_;
   bool rotate_to_path_;
   bool rotate_at_start_;
+  ros::Subscriber config_subscriber_;
 
   geometry_msgs::Pose last_waypoint_;
   geometry_msgs::Pose next_waypoint_;

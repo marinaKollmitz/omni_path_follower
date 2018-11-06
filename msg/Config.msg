@@ -1,0 +1,3 @@
+float32 in_path_vel
+float32 rotate_vel
+bool rotate_to_path

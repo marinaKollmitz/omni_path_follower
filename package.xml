@@ -61,6 +61,8 @@
   <build_export_depend>pluginlib</build_export_depend>
   <build_export_depend>roscpp</build_export_depend>
   <build_export_depend>rospy</build_export_depend>
+  <build_depend>message_generation</build_depend>
+  <exec_depend>message_runtime</exec_depend>
   <exec_depend>base_local_planner</exec_depend>
   <exec_depend>costmap_2d</exec_depend>
   <exec_depend>nav_core</exec_depend>

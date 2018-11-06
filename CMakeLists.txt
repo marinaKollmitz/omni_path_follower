@@ -17,6 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
   pluginlib
   roscpp
   rospy
+  message_generation
 )
 
 ## System dependencies are found with CMake's conventions
@@ -52,11 +53,10 @@ find_package(catkin REQUIRED COMPONENTS
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   Message1.msg
-#   Message2.msg
-# )
+add_message_files(
+   FILES
+   Config.msg
+)
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -73,10 +73,10 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs  # Or other packages containing msgs
-# )
+generate_messages(
+   DEPENDENCIES
+   std_msgs  # Or other packages containing msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -111,7 +111,7 @@ catkin_package(
   INCLUDE_DIRS include
   LIBRARIES omni_path_follower
 #  CATKIN_DEPENDS base_local_planner costmap_2d nav_core pluginlib roscpp rospy
-  DEPENDS eigen
+  DEPENDS message_runtime eigen
 )
 
 ###########
@@ -135,7 +135,7 @@ add_library(
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
-# add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(omni_path_follower omni_path_follower_generate_messages_cpp omni_path_follower_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context

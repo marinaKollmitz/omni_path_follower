@@ -50,7 +50,18 @@ namespace omni_path_follower
 
     goal_reached_ = false;
     initialized_ = true;
+
+    ros::NodeHandle nh;
+    config_subscriber_ = nh.subscribe("omni_path_follower/config", 1, &PathFollower::config_callback, this);
     return;
+  }
+
+  void PathFollower::config_callback(Config msg)
+  {
+    ROS_INFO("setting new configs");
+    in_path_vel_ = msg.in_path_vel;
+    rotate_vel_ = msg.rotate_vel;
+    rotate_to_path_ = msg.rotate_to_path;
   }
 
   bool PathFollower::computeVelocityCommands(geometry_msgs::Twist &cmd_vel)
@@ -154,7 +165,11 @@ namespace omni_path_follower
     //rotate velocity into robot frame
     cmd_vel.linear.x = cos(delta_angle)*in_path_vel + sin(delta_angle)*to_path_vel;
     cmd_vel.linear.y = -sin(delta_angle)*in_path_vel + cos(delta_angle)*to_path_vel;
-    cmd_vel.angular.z = rotate_vel;
+
+    if(rotate_to_path_)
+      cmd_vel.angular.z = rotate_vel;
+    else
+      cmd_vel.angular.z = rotate_vel_;
 
     //limit velocities
     double abs_lin_vel = hypot(cmd_vel.linear.x, cmd_vel.linear.y);
