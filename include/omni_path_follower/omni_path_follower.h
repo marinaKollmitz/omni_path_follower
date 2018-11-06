@@ -18,6 +18,8 @@ using std::string;
 namespace omni_path_follower
 {
 
+#define EPSILON 0.0001
+
 class PathFollower : public nav_core::BaseLocalPlanner
 {
 public:
@@ -31,10 +33,15 @@ public:
   bool setPlan(const std::vector< geometry_msgs::PoseStamped > &plan);
 
 private:
+  bool posesEqual(geometry_msgs::PoseStamped first, geometry_msgs::PoseStamped second);
   double in_path_vel_;
   double to_path_k_;
   double angle_k_;
   double goal_threshold_;
+  double max_lin_vel_;
+  double max_ang_vel_;
+  double min_lin_vel_;
+  double min_ang_vel_;
   bool rotate_to_path_;
   bool rotate_at_start_;
 
@@ -42,6 +49,8 @@ private:
   geometry_msgs::Pose next_waypoint_;
   int path_length_;
   int path_index_;
+  // TODO keeping the current path index is not ideal
+  // when the global plan is updated before the goal is reached ...
 
   std::vector<geometry_msgs::PoseStamped> global_plan_;
   geometry_msgs::PoseStamped goal_;
