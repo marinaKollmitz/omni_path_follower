@@ -31,12 +31,12 @@ namespace omni_path_follower
     tfl_ = tf;
     costmap_ros_ = costmap_ros;
 
-    in_path_vel_ = 0.25;
-    to_path_k_ = 0.25;
+    in_path_vel_ = 0.5;
+    to_path_k_ = 1.25;
     angle_k_ = 0.5;
-    goal_threshold_ = 0.25;
-    max_lin_vel_ = 0.4;
-    max_ang_vel_ = 1.0;
+    goal_threshold_ = 0.5;
+    max_lin_vel_ = 0.75;
+    max_ang_vel_ = 1.5;
     min_lin_vel_ = 0.01;
     min_ang_vel_ = 0.05;
 
@@ -133,8 +133,10 @@ namespace omni_path_follower
     double goal_dist = vec_goalrob.norm();
 
     //parking in to goal
-    if(goal_dist < goal_threshold_)
+    if(goal_dist < goal_threshold_ || path_index_ > (path_length_ - 2))
     {
+      ROS_INFO_ONCE("parking move");
+
       //get goal in robot coordinate frame
       tf::Transform trafo_robot_in_world(robot_pose.getRotation(), robot_pose.getOrigin());
       tf::Transform trafo_world_in_robot = trafo_robot_in_world.inverse();
@@ -186,12 +188,19 @@ namespace omni_path_follower
 
     //check if we need to switch to the next path segment
     double dot = (-1*vec_lastnext).dot(vec_nextrob);
-    if(dot < 0 && path_index_ < (path_length_ - 2))
+    while(dot < 0 && path_index_ < (path_length_ - 2))
     {
       ROS_DEBUG("path_follower: next waypoint");
       path_index_ += 1;
       last_waypoint_ = global_plan_.at(path_index_).pose;
       next_waypoint_ = global_plan_.at(path_index_+1).pose;
+
+      vec_lastnext << next_waypoint_.position.x - last_waypoint_.position.x,
+                      next_waypoint_.position.y - last_waypoint_.position.y;
+      vec_nextrob << robot_pose.getOrigin().getX() - next_waypoint_.position.x,
+                     robot_pose.getOrigin().getY() - next_waypoint_.position.y;
+
+      dot = (-1*vec_lastnext).dot(vec_nextrob);
     }
 
     return true;
@@ -211,6 +220,7 @@ namespace omni_path_follower
     }
 
     ROS_DEBUG("path follower: got plan");
+
 
     //only reset waypoints and path index if the start changed
     if(!posesEqual(global_plan_.front(), plan.front()))
