@@ -67,6 +67,13 @@ namespace omni_path_follower
   bool PathFollower::computeVelocityCommands(geometry_msgs::Twist &cmd_vel)
   {
     geometry_msgs::Twist zero_vel;
+    if(path_length_ == 0)
+    {
+      ROS_INFO("omni path follower: path is empty");
+      cmd_vel = zero_vel;
+      return true;
+    }
+
     if(goal_.header.frame_id.compare("map")!=0)
     {
       ROS_ERROR("omni path follower can only process paths in map frame");
@@ -220,7 +227,6 @@ namespace omni_path_follower
     }
 
     ROS_DEBUG("path follower: got plan");
-
 
     //only reset waypoints and path index if the start changed
     if(!posesEqual(global_plan_.front(), plan.front()))
