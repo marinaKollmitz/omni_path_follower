@@ -31,9 +31,9 @@ namespace omni_path_follower
     tfl_ = tf;
     costmap_ros_ = costmap_ros;
 
-    in_path_vel_ = 0.5;
-    to_path_k_ = 1.25;
-    angle_k_ = 0.5;
+    in_path_vel_ = 0.4;
+    to_path_k_ = 0.75;
+    angle_k_ = 1.0;
     goal_threshold_ = 0.5;
     max_lin_vel_ = 0.75;
     max_ang_vel_ = 1.5;
