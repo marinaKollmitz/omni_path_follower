@@ -45,6 +45,7 @@ private:
   double max_ang_vel_;
   double min_lin_vel_;
   double min_ang_vel_;
+  double max_path_offset_;
   bool rotate_to_path_;
   bool rotate_at_start_;
   ros::Subscriber config_subscriber_;

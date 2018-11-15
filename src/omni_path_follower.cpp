@@ -36,6 +36,7 @@ namespace omni_path_follower
     max_ang_vel_ = 1.5;
     min_lin_vel_ = 0.01;
     min_ang_vel_ = 0.05;
+    max_path_offset_ = 0.25;
 
     rotate_to_path_ = true;
     rotate_at_start_ = false;
@@ -125,6 +126,13 @@ namespace omni_path_follower
     //shortest distance from robot to path
     double cross = vec_lastnext[0]*vec_lastrob[1] - vec_lastnext[1]*vec_lastrob[0];
     double to_path_dist = cross/len_lastnext;   //TODO norm = 0?!
+
+    if(fabs(to_path_dist) > max_path_offset_)
+    {
+      ROS_INFO("omni path follower: distance to path too big!");
+      cmd_vel = zero_vel;
+      return false;
+    }
 
     //velocity controller
     double to_path_vel = - to_path_k_ * to_path_dist;
