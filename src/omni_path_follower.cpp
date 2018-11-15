@@ -16,11 +16,8 @@ namespace omni_path_follower
     //    first.pose.position - second.pose.position;
     if(fabs(first.pose.position.x - second.pose.position.x) < EPSILON &&
        fabs(first.pose.position.y - second.pose.position.y) < EPSILON &&
-       fabs(first.pose.position.z - second.pose.position.z) < EPSILON &&
-       fabs(first.pose.orientation.x - second.pose.orientation.x) < EPSILON &&
-       fabs(first.pose.orientation.y - second.pose.orientation.y) < EPSILON &&
-       fabs(first.pose.orientation.z - second.pose.orientation.z) < EPSILON &&
-       fabs(first.pose.orientation.w - second.pose.orientation.w) < EPSILON)
+       fabs(first.pose.position.z - second.pose.position.z) < EPSILON
+       )
       return true;
 
     return false;
