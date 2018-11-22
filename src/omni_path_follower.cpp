@@ -29,11 +29,14 @@ namespace omni_path_follower
     costmap_ros_ = costmap_ros;
 
     in_path_vel_ = 0.4;
-    to_path_k_ = 0.75;
-    angle_k_ = 1.0;
-    goal_threshold_ = 0.5;
+
+    //these gains are designed for in path vel of 0.4
+    to_path_k_ = 0.5;
+    angle_k_ = 0.75;
+
+    goal_threshold_ = 0.75;
     max_lin_vel_ = 0.75;
-    max_ang_vel_ = 1.5;
+    max_ang_vel_ = 1.0;
     min_lin_vel_ = 0.01;
     min_ang_vel_ = 0.05;
     max_path_offset_ = 0.25;
@@ -60,6 +63,7 @@ namespace omni_path_follower
     in_path_vel_ = msg.in_path_vel;
     rotate_vel_ = msg.rotate_vel;
     rotate_to_path_ = msg.rotate_to_path;
+    rotate_at_start_ = msg.rotate_at_start;
   }
 
   bool PathFollower::computeVelocityCommands(geometry_msgs::Twist &cmd_vel)
@@ -134,14 +138,35 @@ namespace omni_path_follower
       return false;
     }
 
+    //scale gains according to path velocity
+    double to_path_k = to_path_k_ * in_path_vel_ / 0.4;
+    double angle_k = angle_k_ * in_path_vel_ / 0.4;
+
     //velocity controller
-    double to_path_vel = - to_path_k_ * to_path_dist;
+    double to_path_vel = - to_path_k * to_path_dist;
     double in_path_vel = in_path_vel_;
-    double rotate_vel = -angle_k_ * delta_angle;
+    double rotate_vel = -angle_k * delta_angle;
 
     //if we are close to the goal, slow down
     Eigen::Vector2d vec_goalrob(robot_pose.getOrigin().getX() - goal_.pose.position.x,
                                 robot_pose.getOrigin().getY() - goal_.pose.position.y);
+
+    if(rotate_at_start_ && !is_rotated_)
+    {
+        ROS_INFO_ONCE("rotating to path");
+        cmd_vel.angular.z = rotate_vel;
+
+	if(fabs(cmd_vel.angular.z) > max_ang_vel_)
+	{
+	    cmd_vel.angular.z = cmd_vel.angular.z / fabs(cmd_vel.angular.z) * max_ang_vel_;
+	}
+
+        if(fabs(delta_angle) < 0.2)
+            is_rotated_ = true;
+
+        return true;
+    }
+
     double goal_dist = vec_goalrob.norm();
 
     //parking in to goal
@@ -162,17 +187,34 @@ namespace omni_path_follower
 
       cmd_vel.linear.x = in_path_vel * goal_in_robot.x() / goal_threshold_;
       cmd_vel.linear.y = in_path_vel * goal_in_robot.y() / goal_threshold_;
-      cmd_vel.angular.z = -angle_k_ * delta_angle;;
-
-      //once velocities are under threshold, report goal reached
-      if(fabs(cmd_vel.linear.x) < min_lin_vel_ &&
-         fabs(cmd_vel.linear.y) < min_lin_vel_ &&
-         fabs(cmd_vel.angular.z) < min_ang_vel_)
+      
+      if(rotate_to_path_)
       {
-        cmd_vel = zero_vel;
-        goal_reached_ = true;
+          cmd_vel.angular.z = -angle_k_ * delta_angle;
+          
+          //once velocities are under threshold, report goal reached
+          if(fabs(cmd_vel.linear.x) < min_lin_vel_ &&
+             fabs(cmd_vel.linear.y) < min_lin_vel_ &&
+             fabs(cmd_vel.angular.z) < min_ang_vel_)
+          {
+            cmd_vel = zero_vel;
+            goal_reached_ = true;
+          }
       }
-
+      
+      else
+      {
+          cmd_vel.angular.z = rotate_vel_;
+          
+          //once velocities are under threshold, report goal reached
+          if(fabs(cmd_vel.linear.x) < min_lin_vel_ &&
+             fabs(cmd_vel.linear.y) < min_lin_vel_)
+          {
+            cmd_vel = zero_vel;
+            goal_reached_ = true;
+          }
+      }
+      
       return true;
     }
 
@@ -239,6 +281,7 @@ namespace omni_path_follower
       ROS_DEBUG("reset path index");
       path_index_ = 0;
       path_length_ = plan.size();
+      is_rotated_ = false;
       last_waypoint_ = plan.at(path_index_).pose;
       next_waypoint_ = plan.at(path_index_ + 1).pose;
     }

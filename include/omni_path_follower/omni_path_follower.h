@@ -48,6 +48,7 @@ private:
   double max_path_offset_;
   bool rotate_to_path_;
   bool rotate_at_start_;
+  bool is_rotated_;
   ros::Subscriber config_subscriber_;
 
   geometry_msgs::Pose last_waypoint_;
