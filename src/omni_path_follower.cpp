@@ -72,9 +72,10 @@ namespace omni_path_follower
       return true;
     }
 
-    if(goal_.header.frame_id.compare("map")!=0)
+    if(goal_.header.frame_id.compare("map")>1)
     {
       ROS_ERROR("omni path follower can only process paths in map frame");
+      ROS_ERROR_STREAM("goal frame: " << goal_.header.frame_id << std::endl);
       return false;
     }
 
