@@ -30,16 +30,19 @@ namespace omni_path_follower
 
     in_path_vel_ = 0.4;
     to_path_k_ = 0.75;
-    angle_k_ = 1.0;
+    angle_k_ = 0.5;
     goal_threshold_ = 0.5;
     max_lin_vel_ = 0.75;
     max_ang_vel_ = 1.5;
     min_lin_vel_ = 0.01;
     min_ang_vel_ = 0.05;
-    max_path_offset_ = 0.25;
+    max_path_offset_ = 3.5;
+    parking_scale_ = 0.5;
 
     rotate_to_path_ = true;
-    rotate_at_start_ = false;
+    rotate_at_start_ = true;
+    rotating_ = false;
+    path_index_offset_ = 8;
 
     //initialize empty global plan
     std::vector<geometry_msgs::PoseStamped> empty_plan;
@@ -51,6 +54,7 @@ namespace omni_path_follower
 
     ros::NodeHandle nh;
     config_subscriber_ = nh.subscribe("omni_path_follower/config", 1, &PathFollower::config_callback, this);
+    waypoint_pub_ = nh.advertise<geometry_msgs::PoseStamped>("omni_path_follower/current_waypoint", 1);
     return;
   }
 
@@ -111,29 +115,35 @@ namespace omni_path_follower
       return true;
     }
 
-    Eigen::Vector2d vec_lastnext(next_waypoint_.position.x - last_waypoint_.position.x,
-                                 next_waypoint_.position.y - last_waypoint_.position.y);
+    /** calculate velocity commands **/
+
+    int follow_idx = std::min(path_index_+path_index_offset_+1, path_length_-1);
+    geometry_msgs::PoseStamped follow_waypoint = global_plan_.at(follow_idx);
+
+    //publish follow waypoint for debugging
+    waypoint_pub_.publish(follow_waypoint);
+
+    Eigen::Vector2d vec_lastfollow(follow_waypoint.pose.position.x - last_waypoint_.position.x,
+                                   follow_waypoint.pose.position.y - last_waypoint_.position.y);
     Eigen::Vector2d vec_lastrob(robot_pose.getOrigin().getX() - last_waypoint_.position.x,
                                 robot_pose.getOrigin().getY() - last_waypoint_.position.y);
-    Eigen::Vector2d vec_nextrob(robot_pose.getOrigin().getX() - next_waypoint_.position.x,
-                                robot_pose.getOrigin().getY() - next_waypoint_.position.y);
 
     double robot_angle = tf::getYaw(robot_pose.getRotation());
-    double path_angle = atan2(vec_lastnext[1],vec_lastnext[0]);
+    double path_angle = atan2(vec_lastfollow[1],vec_lastfollow[0]);
     double delta_angle = angles::shortest_angular_distance(path_angle,robot_angle);
 
-    double len_lastnext = vec_lastnext.norm();
+    double len_lastfollow = vec_lastfollow.norm();
 
     //shortest distance from robot to path
-    double cross = vec_lastnext[0]*vec_lastrob[1] - vec_lastnext[1]*vec_lastrob[0];
-    double to_path_dist = cross/len_lastnext;   //TODO norm = 0?!
+    double cross = vec_lastfollow[0]*vec_lastrob[1] - vec_lastfollow[1]*vec_lastrob[0];
+    double to_path_dist = cross/len_lastfollow;   //TODO norm = 0?!
 
-    if(fabs(to_path_dist) > max_path_offset_)
-    {
-      ROS_INFO("omni path follower: distance to path too big!");
-      cmd_vel = zero_vel;
-      return false;
-    }
+     if(fabs(to_path_dist) > max_path_offset_)
+     {
+       ROS_INFO("omni path follower: distance to path too big!");
+       cmd_vel = zero_vel;
+       return false;
+     }
 
     //velocity controller
     double to_path_vel = - to_path_k_ * to_path_dist;
@@ -146,9 +156,11 @@ namespace omni_path_follower
     double goal_dist = vec_goalrob.norm();
 
     //parking in to goal
-    if(goal_dist < goal_threshold_ || path_index_ > (path_length_ - 2))
+    if(goal_dist < goal_threshold_ || path_index_ >= (path_length_ - 2))
     {
-      ROS_INFO_ONCE("parking move");
+      ROS_DEBUG("parking move");
+      //make sure we dont do out of parking move
+      path_index_ = path_length_ - 1;
 
       //get goal in robot coordinate frame
       tf::Transform trafo_robot_in_world(robot_pose.getRotation(), robot_pose.getOrigin());
@@ -161,9 +173,17 @@ namespace omni_path_follower
       double goal_angle = tf::getYaw(goal_.pose.orientation);
       delta_angle = angles::shortest_angular_distance(goal_angle, robot_angle);
 
-      cmd_vel.linear.x = in_path_vel * goal_in_robot.x() / goal_threshold_;
-      cmd_vel.linear.y = in_path_vel * goal_in_robot.y() / goal_threshold_;
-      cmd_vel.angular.z = -angle_k_ * delta_angle;;
+      if(goal_dist > goal_threshold_)
+      {
+        //if we went into parking because of the path index
+        ROS_DEBUG("above threshold, scaling!");
+        goal_in_robot.setX(goal_in_robot.x() * goal_threshold_ / goal_dist);
+        goal_in_robot.setY(goal_in_robot.y() * goal_threshold_ / goal_dist);
+      }
+
+      cmd_vel.linear.x = parking_scale_ * in_path_vel * goal_in_robot.x() / goal_threshold_;
+      cmd_vel.linear.y = parking_scale_ * in_path_vel * goal_in_robot.y() / goal_threshold_;
+      cmd_vel.angular.z = parking_scale_ * -angle_k_ * delta_angle / goal_threshold_;
 
       //once velocities are under threshold, report goal reached
       if(fabs(cmd_vel.linear.x) < min_lin_vel_ &&
@@ -199,21 +219,40 @@ namespace omni_path_follower
       cmd_vel.angular.z = cmd_vel.angular.z / fabs(cmd_vel.angular.z) * max_ang_vel_;
     }
 
-    //check if we need to switch to the next path segment
-    double dot = (-1*vec_lastnext).dot(vec_nextrob);
-    while(dot < 0 && path_index_ < (path_length_ - 2))
+    /** update path index **/
+
+    Eigen::Vector2d vec_nextlast(last_waypoint_.position.x - next_waypoint_.position.x,
+                                 last_waypoint_.position.y - next_waypoint_.position.y);
+    Eigen::Vector2d vec_nextrob(robot_pose.getOrigin().getX() - next_waypoint_.position.x,
+                                robot_pose.getOrigin().getY() - next_waypoint_.position.y);
+
+    double dot = vec_nextlast.dot(vec_nextrob);
+    while(dot < 0.0 && path_index_ < (path_length_ - 2))
     {
       ROS_DEBUG("path_follower: next waypoint");
       path_index_ += 1;
+
       last_waypoint_ = global_plan_.at(path_index_).pose;
       next_waypoint_ = global_plan_.at(path_index_+1).pose;
 
-      vec_lastnext << next_waypoint_.position.x - last_waypoint_.position.x,
-                      next_waypoint_.position.y - last_waypoint_.position.y;
+      vec_nextlast << last_waypoint_.position.x - next_waypoint_.position.x,
+          last_waypoint_.position.y - next_waypoint_.position.y;
       vec_nextrob << robot_pose.getOrigin().getX() - next_waypoint_.position.x,
-                     robot_pose.getOrigin().getY() - next_waypoint_.position.y;
+          robot_pose.getOrigin().getY() - next_waypoint_.position.y;
 
-      dot = (-1*vec_lastnext).dot(vec_nextrob);
+      dot = vec_nextlast.dot(vec_nextrob);
+    }
+
+    //rotate only at the start
+    if(rotating_)
+    {
+      if(fabs(delta_angle) > 0.5)
+      {
+        cmd_vel.linear.x = 0;
+        cmd_vel.linear.y = 0;
+      }
+      else
+        rotating_ = false;
     }
 
     return true;
@@ -247,6 +286,9 @@ namespace omni_path_follower
     global_plan_  = plan;
     goal_reached_ = false;
     goal_ = global_plan_.back();
+
+    if(rotate_at_start_)
+      rotating_ = true;
 
     return true;
   }

@@ -40,6 +40,7 @@ private:
   double rotate_vel_;
   double to_path_k_;
   double angle_k_;
+  double parking_scale_;
   double goal_threshold_;
   double max_lin_vel_;
   double max_ang_vel_;
@@ -48,12 +49,15 @@ private:
   double max_path_offset_;
   bool rotate_to_path_;
   bool rotate_at_start_;
+  bool rotating_;
   ros::Subscriber config_subscriber_;
+  ros::Publisher waypoint_pub_;
 
   geometry_msgs::Pose last_waypoint_;
   geometry_msgs::Pose next_waypoint_;
   int path_length_;
   int path_index_;
+  int path_index_offset_; //follower later waypoint, has a path smoothing effect
   // TODO keeping the current path index is not ideal
   // when the global plan is updated before the goal is reached ...
 
