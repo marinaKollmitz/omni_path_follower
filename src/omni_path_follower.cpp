@@ -42,7 +42,7 @@ namespace omni_path_follower
     rotate_to_path_ = true;
     rotate_at_start_ = true;
     rotating_ = false;
-    path_index_offset_ = 8;
+    path_index_offset_ = 5;
 
     //initialize empty global plan
     std::vector<geometry_msgs::PoseStamped> empty_plan;
@@ -274,14 +274,14 @@ namespace omni_path_follower
     ROS_DEBUG("path follower: got plan");
 
     //only reset waypoints and path index if the start changed
-    if(!posesEqual(global_plan_.front(), plan.front()))
-    {
-      ROS_DEBUG("reset path index");
-      path_index_ = 0;
-      path_length_ = plan.size();
-      last_waypoint_ = plan.at(path_index_).pose;
-      next_waypoint_ = plan.at(path_index_ + 1).pose;
-    }
+//    if(!posesEqual(global_plan_.front(), plan.front()))
+//    {
+    ROS_INFO("reset path index");
+    path_index_ = 0;
+    path_length_ = plan.size();
+    last_waypoint_ = plan.at(path_index_).pose;
+    next_waypoint_ = plan.at(path_index_ + 1).pose;
+//    }
 
     global_plan_  = plan;
     goal_reached_ = false;
