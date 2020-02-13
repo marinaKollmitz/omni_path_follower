@@ -272,20 +272,32 @@ namespace omni_path_follower
     }
 
     ROS_DEBUG("path follower: got plan");
+    path_length_ = plan.size();
+    path_index_ = 0;
+    global_plan_  = plan;
 
     //only reset waypoints and path index if the start changed
-//    if(!posesEqual(global_plan_.front(), plan.front()))
-//    {
-    ROS_INFO("reset path index");
-    path_index_ = 0;
-    path_length_ = plan.size();
-    last_waypoint_ = plan.at(path_index_).pose;
-    next_waypoint_ = plan.at(path_index_ + 1).pose;
-//    }
+    if(plan.size() > 1)
+    {
+      ROS_INFO("reset path index");
+      last_waypoint_ = plan.at(path_index_).pose;
+      next_waypoint_ = plan.at(path_index_ + 1).pose;
 
-    global_plan_  = plan;
-    goal_reached_ = false;
-    goal_ = global_plan_.back();
+      goal_reached_ = false;
+      goal_ = global_plan_.back();
+    }
+    else if (plan.size() == 1)
+    {
+      //robot should directly go into parking move
+      last_waypoint_ = plan.at(path_index_).pose;
+      next_waypoint_ = plan.at(path_index_).pose;
+      goal_reached_ = false;
+      goal_ = global_plan_.back();
+    }
+    else
+    {
+      goal_reached_ = true;
+    }
 
     if(rotate_at_start_)
       rotating_ = true;
