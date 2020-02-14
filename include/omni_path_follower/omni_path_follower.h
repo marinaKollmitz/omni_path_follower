@@ -39,7 +39,6 @@ private:
   bool posesEqual(geometry_msgs::PoseStamped first, geometry_msgs::PoseStamped second);
   void config_callback(Config msg);
   double in_path_vel_;
-  double rotate_vel_;
   double to_path_k_;
   double angle_k_;
   double parking_scale_;
@@ -65,6 +64,7 @@ private:
 
   std::vector<geometry_msgs::PoseStamped> global_plan_;
   geometry_msgs::PoseStamped goal_;
+  geometry_msgs::PoseStamped last_start_;
   tf::TransformListener* tfl_;
   costmap_2d::Costmap2DROS* costmap_ros_;
 

@@ -28,21 +28,21 @@ namespace omni_path_follower
     tfl_ = tf;
     costmap_ros_ = costmap_ros;
 
-    in_path_vel_ = 0.4;
+    in_path_vel_ = 0.7;
     to_path_k_ = 0.75;
     angle_k_ = 0.5;
     goal_threshold_ = 0.5;
-    max_lin_vel_ = 0.75;
+    max_lin_vel_ = 0.85;
     max_ang_vel_ = 1.5;
     min_lin_vel_ = 0.01;
     min_ang_vel_ = 0.05;
-    max_path_offset_ = 3.5;
+    max_path_offset_ = 2.0;
     parking_scale_ = 0.5;
 
-    rotate_to_path_ = true;
+    rotate_to_path_ = false;
     rotate_at_start_ = true;
     rotating_ = false;
-    path_index_offset_ = 5;
+    path_index_offset_ = 3;
 
     //initialize empty global plan
     std::vector<geometry_msgs::PoseStamped> empty_plan;
@@ -62,7 +62,6 @@ namespace omni_path_follower
   {
     ROS_INFO("setting new configs");
     in_path_vel_ = msg.in_path_vel;
-    rotate_vel_ = msg.rotate_vel;
     rotate_to_path_ = msg.rotate_to_path;
   }
 
@@ -148,7 +147,19 @@ namespace omni_path_follower
     //velocity controller
     double to_path_vel = - to_path_k_ * to_path_dist;
     double in_path_vel = in_path_vel_;
-    double rotate_vel = -angle_k_ * delta_angle;
+
+    double rotate_vel;
+    if(rotate_to_path_)
+      rotate_vel = -angle_k_ * delta_angle;
+    else
+    {
+
+      Eigen::Vector2d vec_startgoal(goal_.pose.position.x - last_start_.pose.position.x,
+                                    goal_.pose.position.y - last_start_.pose.position.y);
+      double start_goal_angle = atan2(vec_startgoal[1],vec_startgoal[0]);
+      double delta_startgoal_angle = angles::shortest_angular_distance(start_goal_angle,robot_angle);
+      rotate_vel = -angle_k_ * delta_startgoal_angle;
+    }
 
     //if we are close to the goal, slow down
     Eigen::Vector2d vec_goalrob(robot_pose.getOrigin().getX() - goal_.pose.position.x,
@@ -200,20 +211,24 @@ namespace omni_path_follower
     //rotate velocity into robot frame
     cmd_vel.linear.x = cos(delta_angle)*in_path_vel + sin(delta_angle)*to_path_vel;
     cmd_vel.linear.y = -sin(delta_angle)*in_path_vel + cos(delta_angle)*to_path_vel;
+    cmd_vel.angular.z = rotate_vel;
 
-    if(rotate_to_path_)
-      cmd_vel.angular.z = rotate_vel;
-    else
-      cmd_vel.angular.z = rotate_vel_;
+//    //limit velocities
+//    double abs_lin_vel = hypot(cmd_vel.linear.x, cmd_vel.linear.y);
+//    if(abs_lin_vel > max_lin_vel_)
+//    {
+//      cmd_vel.linear.x = cmd_vel.linear.x * max_lin_vel_ / abs_lin_vel;
+//      cmd_vel.linear.y = cmd_vel.linear.y * max_lin_vel_ / abs_lin_vel;
+//    }
 
-    //limit velocities
-    double abs_lin_vel = hypot(cmd_vel.linear.x, cmd_vel.linear.y);
-    if(abs_lin_vel > max_lin_vel_)
+    if(fabs(cmd_vel.linear.x) > max_lin_vel_)
     {
-      cmd_vel.linear.x = cmd_vel.linear.x * max_lin_vel_ / abs_lin_vel;
-      cmd_vel.linear.y = cmd_vel.linear.y * max_lin_vel_ / abs_lin_vel;
+      cmd_vel.linear.x = cmd_vel.linear.x / fabs(cmd_vel.linear.x) * max_lin_vel_;
     }
-
+    if(fabs(cmd_vel.linear.y) > max_lin_vel_)
+    {
+      cmd_vel.linear.y = cmd_vel.linear.y / fabs(cmd_vel.linear.y) * max_lin_vel_;
+    }
     if(fabs(cmd_vel.angular.z) > max_ang_vel_)
     {
       cmd_vel.angular.z = cmd_vel.angular.z / fabs(cmd_vel.angular.z) * max_ang_vel_;
@@ -276,31 +291,28 @@ namespace omni_path_follower
     path_index_ = 0;
     global_plan_  = plan;
 
-    //only reset waypoints and path index if the start changed
-    if(plan.size() > 1)
+    if(plan.size() >= 1)
     {
-      ROS_INFO("reset path index");
-      last_waypoint_ = plan.at(path_index_).pose;
-      next_waypoint_ = plan.at(path_index_ + 1).pose;
+      //last start is used so the robot faces the same direction during nav
+      if(!posesEqual(global_plan_.back(), goal_))
+      {
+        if(rotate_at_start_)
+          rotating_ = true;
+        last_start_ = global_plan_.front();
+      }
 
       goal_reached_ = false;
       goal_ = global_plan_.back();
-    }
-    else if (plan.size() == 1)
-    {
-      //robot should directly go into parking move
+
+      ROS_DEBUG("reset path index");
+      int next_idx = std::min(path_index_ + 1, int(plan.size()) - 1);
       last_waypoint_ = plan.at(path_index_).pose;
-      next_waypoint_ = plan.at(path_index_).pose;
-      goal_reached_ = false;
-      goal_ = global_plan_.back();
+      next_waypoint_ = plan.at(next_idx).pose;
     }
     else
     {
       goal_reached_ = true;
     }
-
-    if(rotate_at_start_)
-      rotating_ = true;
 
     return true;
   }
