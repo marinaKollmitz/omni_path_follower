@@ -42,7 +42,7 @@ namespace omni_path_follower
     rotate_to_path_ = false;
     rotate_at_start_ = true;
     rotating_ = false;
-    path_index_offset_ = 3;
+    path_index_offset_ = 4;
 
     //initialize empty global plan
     std::vector<geometry_msgs::PoseStamped> empty_plan;
@@ -261,7 +261,7 @@ namespace omni_path_follower
     //rotate only at the start
     if(rotating_)
     {
-      if(fabs(delta_angle) > 0.5)
+      if(fabs(cmd_vel.angular.z) > 0.1)
       {
         cmd_vel.linear.x = 0;
         cmd_vel.linear.y = 0;
