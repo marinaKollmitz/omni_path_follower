@@ -23,12 +23,69 @@ namespace omni_path_follower
     return false;
   }
 
+  //find path index closest to robot
+  int PathFollower::getPathIndex(const std::vector< geometry_msgs::PoseStamped > &plan,
+                                 const tf::Pose &robot_pose)
+  {
+    double min_dist = std::numeric_limits<double>::infinity();
+    double min_idx = -1;
+
+    for(int i=0; i<plan.size()-1; i++)
+    {
+      int idx = i;
+
+      Eigen::Vector3d x0(plan.at(i).pose.position.x,
+                         plan.at(i).pose.position.y,
+                         0.0);
+      Eigen::Vector3d x1(plan.at(i+1).pose.position.x,
+                         plan.at(i+1).pose.position.y,
+                         0.0);
+      Eigen::Vector3d p(robot_pose.getOrigin().getX(),
+                        robot_pose.getOrigin().getY(),
+                        0.0);
+
+      //coordinate on line between x0 and x1
+      double t = -(x0 - p).dot(x1-x0)/(pow((x1-x0).norm(),2));
+
+      double dist;
+      //check if closest point is between x0 and x1
+      if(t > 0.0 && t < 1.0)
+      {
+        dist = ((x1-x0).cross(x0-p)).norm()/((x1-x0).norm());
+
+        if(t>1.0)
+        {
+          //index is next point
+          idx = i+1;
+        }
+      }
+      else
+      {
+        dist = (x0-p).norm();
+        double d1 = (x1-p).norm();
+
+        if(d1 < dist)
+        {
+          dist = d1;
+        }
+      }
+
+      if(dist < min_dist)
+      {
+        min_dist = dist;
+        min_idx = idx;
+      }
+    }
+
+    return min_idx;
+  }
+
   void PathFollower::initialize(std::string name, tf::TransformListener *tf, costmap_2d::Costmap2DROS *costmap_ros)
   {
     tfl_ = tf;
     costmap_ros_ = costmap_ros;
 
-    in_path_vel_ = 0.7;
+    in_path_vel_ = 0.4;
     to_path_k_ = 0.75;
     angle_k_ = 0.5;
     goal_threshold_ = 0.5;
@@ -39,10 +96,10 @@ namespace omni_path_follower
     max_path_offset_ = 2.0;
     parking_scale_ = 0.5;
 
-    rotate_to_path_ = false;
+    rotate_to_path_ = true;
     rotate_at_start_ = true;
     rotating_ = false;
-    path_index_offset_ = 4;
+    path_index_offset_ = 2;
 
     //initialize empty global plan
     std::vector<geometry_msgs::PoseStamped> empty_plan;
@@ -236,27 +293,18 @@ namespace omni_path_follower
 
     /** update path index **/
 
-    Eigen::Vector2d vec_nextlast(last_waypoint_.position.x - next_waypoint_.position.x,
-                                 last_waypoint_.position.y - next_waypoint_.position.y);
-    Eigen::Vector2d vec_nextrob(robot_pose.getOrigin().getX() - next_waypoint_.position.x,
-                                robot_pose.getOrigin().getY() - next_waypoint_.position.y);
-
-    double dot = vec_nextlast.dot(vec_nextrob);
-    while(dot < 0.0 && path_index_ < (path_length_ - 2))
+    int path_index = getPathIndex(global_plan_, robot_pose);
+    if(path_index < 0)
     {
-      ROS_DEBUG("path_follower: next waypoint");
-      path_index_ += 1;
-
-      last_waypoint_ = global_plan_.at(path_index_).pose;
-      next_waypoint_ = global_plan_.at(path_index_+1).pose;
-
-      vec_nextlast << last_waypoint_.position.x - next_waypoint_.position.x,
-          last_waypoint_.position.y - next_waypoint_.position.y;
-      vec_nextrob << robot_pose.getOrigin().getX() - next_waypoint_.position.x,
-          robot_pose.getOrigin().getY() - next_waypoint_.position.y;
-
-      dot = vec_nextlast.dot(vec_nextrob);
+      //TODO probably means path is too short
+      ROS_ERROR("could not get next path index");
+      exit(0);
     }
+
+    //TODO check path end
+    path_index_ = path_index;
+    last_waypoint_ = global_plan_.at(path_index_).pose;
+    next_waypoint_ = global_plan_.at(path_index_+1).pose;
 
     //rotate only at the start
     if(rotating_)

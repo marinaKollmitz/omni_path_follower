@@ -34,6 +34,8 @@ public:
   bool computeVelocityCommands(geometry_msgs::Twist &cmd_vel);
   bool isGoalReached();
   bool setPlan(const std::vector< geometry_msgs::PoseStamped > &plan);
+  int getPathIndex(const std::vector< geometry_msgs::PoseStamped > &plan,
+                   const tf::Pose &robot_pose);
 
 private:
   bool posesEqual(geometry_msgs::PoseStamped first, geometry_msgs::PoseStamped second);
