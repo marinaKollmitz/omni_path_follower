@@ -93,13 +93,13 @@ namespace omni_path_follower
     max_ang_vel_ = 1.5;
     min_lin_vel_ = 0.01;
     min_ang_vel_ = 0.05;
-    max_path_offset_ = 2.0;
+    max_path_offset_ = 0.7;
     parking_scale_ = 0.5;
 
     rotate_to_path_ = true;
     rotate_at_start_ = true;
     rotating_ = false;
-    path_index_offset_ = 2;
+    path_index_offset_ = 3;
 
     //initialize empty global plan
     std::vector<geometry_msgs::PoseStamped> empty_plan;
