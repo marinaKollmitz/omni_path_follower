@@ -93,7 +93,7 @@ namespace omni_path_follower
     max_ang_vel_ = 1.5;
     min_lin_vel_ = 0.01;
     min_ang_vel_ = 0.05;
-    max_path_offset_ = 0.7;
+    max_path_offset_ = 2.0;
     parking_scale_ = 0.5;
 
     rotate_to_path_ = true;
