@@ -96,7 +96,7 @@ namespace omni_path_follower
     max_path_offset_ = 2.0;
     parking_scale_ = 0.5;
 
-    rotate_to_path_ = true;
+    rotate_to_path_ = false;
     rotate_at_start_ = true;
     rotating_ = false;
     path_index_offset_ = 3;
