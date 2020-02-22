@@ -12,6 +12,7 @@
 #include <Eigen/Dense>
 #include <tf/tf.h>
 #include <tf/transform_listener.h>
+#include <omni_path_follower/PathFollowerConfig.h>
 
 using std::string;
 
@@ -38,8 +39,10 @@ public:
                    const tf::Pose &robot_pose);
 
 private:
+  void reconfigureCallback(omni_path_follower::PathFollowerConfig &config, u_int32_t level);
   bool posesEqual(geometry_msgs::PoseStamped first, geometry_msgs::PoseStamped second);
-  void config_callback(Config msg);
+
+  dynamic_reconfigure::Server<omni_path_follower::PathFollowerConfig> *server_;
   double in_path_vel_;
   double to_path_k_;
   double angle_k_;
@@ -53,7 +56,6 @@ private:
   bool rotate_to_path_;
   bool rotate_at_start_;
   bool rotating_;
-  ros::Subscriber config_subscriber_;
   ros::Publisher waypoint_pub_;
 
   geometry_msgs::Pose last_waypoint_;

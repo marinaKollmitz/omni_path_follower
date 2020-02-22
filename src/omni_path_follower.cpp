@@ -9,7 +9,18 @@ namespace omni_path_follower
   PathFollower::PathFollower() :
      initialized_(false)
    {
+    //setup dynamic reconfigure
+    dynamic_reconfigure::Server<omni_path_follower::PathFollowerConfig>::CallbackType f;
+    f = boost::bind(&PathFollower::reconfigureCallback, this, _1, _2);
+    server_ = new dynamic_reconfigure::Server<omni_path_follower::PathFollowerConfig>(ros::NodeHandle("~/omni_path_follower"));
+    server_->setCallback(f);
    }
+
+  void PathFollower::reconfigureCallback(
+      omni_path_follower::PathFollowerConfig &config, u_int32_t level)
+  {
+    rotate_to_path_ = config.rotate_to_path;
+  }
 
   bool PathFollower::posesEqual(geometry_msgs::PoseStamped first, geometry_msgs::PoseStamped second)
   {
@@ -110,16 +121,8 @@ namespace omni_path_follower
     initialized_ = true;
 
     ros::NodeHandle nh;
-    config_subscriber_ = nh.subscribe("omni_path_follower/config", 1, &PathFollower::config_callback, this);
     waypoint_pub_ = nh.advertise<geometry_msgs::PoseStamped>("omni_path_follower/current_waypoint", 1);
     return;
-  }
-
-  void PathFollower::config_callback(Config msg)
-  {
-    ROS_INFO("setting new configs");
-    in_path_vel_ = msg.in_path_vel;
-    rotate_to_path_ = msg.rotate_to_path;
   }
 
   bool PathFollower::computeVelocityCommands(geometry_msgs::Twist &cmd_vel)
@@ -340,6 +343,9 @@ namespace omni_path_follower
       ROS_ERROR("path follower: planner has not been initialized");
       return false;
     }
+
+    if(rotate_to_path_)
+      ROS_INFO("rotating to path");
 
     ROS_DEBUG("path follower: got plan");
     path_length_ = plan.size();
