@@ -270,6 +270,13 @@ namespace omni_path_follower
     cmd_vel.linear.y = -sin(delta_angle)*in_path_vel + cos(delta_angle)*to_path_vel;
     cmd_vel.angular.z = rotate_vel;
 
+    //FIXME this is a dirty hack for the experiment, please remove!
+    if(!rotate_to_path_)
+    {
+      //always drive forward
+      cmd_vel.linear.x = in_path_vel;
+    }
+
 //    //limit velocities
 //    double abs_lin_vel = hypot(cmd_vel.linear.x, cmd_vel.linear.y);
 //    if(abs_lin_vel > max_lin_vel_)
